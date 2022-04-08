@@ -1,0 +1,7 @@
+Here I have implemented Catalog
+
+Design Decisions
+- I have created ArrayList in TupleDesc. Why? -> I needed arraylike datastructure for the TDItems and the size had to be malleable.
+
+- I have added toString method HeapPageId and PageId to make getting the hashCode easier.
+
