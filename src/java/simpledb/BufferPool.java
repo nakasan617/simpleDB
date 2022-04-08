@@ -12,13 +12,53 @@ import java.io.*;
  * locks to read/write the page.
  */
 public class BufferPool {
-    /** Bytes per page, including header. */
+    private class Lock {
+        private boolean isLocked = false;
+
+        public synchronized void lock() throws InterruptedException
+        {
+            while(isLocked) {
+                wait();
+            }
+            isLocked = true;
+        }
+
+        public synchronized void unlock()
+        {
+            isLocked = false;
+            notify();
+        }
+    }
+
+    private class PageInfo {
+        public Page page;
+        public PageId id;
+        public int timeStamp; 
+
+        public PageInfo()
+        {
+            page = null;
+            id = null;
+            timeStamp = -1;
+        }
+
+        public PageInfo(Page _page, PageId _id, int _timeStamp)
+        {
+            page = _page;
+            id = _id;
+            timeStamp = _timeStamp;
+        }
+    }
+   /** Bytes per page, including header. */
     public static final int PAGE_SIZE = 4096;
 
     /** Default number of pages passed to the constructor. This is used by
     other classes. BufferPool should use the numPages argument to the
     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
+    private int MAX_PAGES;
+    private Lock lock;
+    private PageInfo pageInfos [];
 
     /**
      * Creates a BufferPool that caches up to numPages pages.
@@ -26,7 +66,9 @@ public class BufferPool {
      * @param numPages maximum number of pages in this buffer pool.
      */
     public BufferPool(int numPages) {
-        // some code goes here
+        this.MAX_PAGES = numPages;
+        this.lock = new Lock();
+        this.pageInfos = new PageInfo [numPages];
     }
 
     /**
@@ -45,8 +87,18 @@ public class BufferPool {
      * @param perm the requested permissions on the page
      */
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
-        throws TransactionAbortedException, DbException {
-        // some code goes here
+        throws TransactionAbortedException, DbException, InterruptedException {
+        this.lock.lock();
+        for(int i = 0; i < this.pageInfos.length; i++)
+        {
+            if(this.pageInfos[i].id.equals(pid))
+            {
+                this.lock.unlock();
+                return this.pageInfos[i].page;
+            } 
+        }
+        
+        this.lock.unlock();
         return null;
     }
 
