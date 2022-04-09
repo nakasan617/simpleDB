@@ -1,4 +1,4 @@
-Here I have HeapPageIdTest ready.
+Here I have RecordId ready.
 
 Design Decisions
 - I have created ArrayList in TupleDesc. Why? -> I needed arraylike datastructure for the TDItems and the size had to be malleable.
