@@ -302,7 +302,7 @@ public class HeapPage implements Page {
         int filter = 1 << (Bit);
         int flags = this.header[Byte];
 
-        return (flags & filter) > 0;
+        return (flags & filter) != 0;
     }
 
     /**
@@ -324,7 +324,7 @@ public class HeapPage implements Page {
         ArrayList<Tuple> al = new ArrayList<Tuple> ();
         for(int i = 0; i < this.numSlots; i++)
         {
-            if(isSlotUsed(i))
+            if(this.isSlotUsed(i))
             {
                 al.add(this.tuples[i]);
             }

@@ -12,24 +12,6 @@ import java.io.*;
  * locks to read/write the page.
  */
 public class BufferPool {
-    private class Lock {
-        private boolean isLocked = false;
-
-        public synchronized void lock() throws InterruptedException
-        {
-            while(isLocked) {
-                wait();
-            }
-            isLocked = true;
-        }
-
-        public synchronized void unlock()
-        {
-            isLocked = false;
-            notify();
-        }
-    }
-
     private class PageInfo {
         public Page page;
         public PageId id;
@@ -57,7 +39,6 @@ public class BufferPool {
     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
     private int MAX_PAGES;
-    private Lock lock;
     private PageInfo pageInfos [];
 
     /**
@@ -67,7 +48,6 @@ public class BufferPool {
      */
     public BufferPool(int numPages) {
         this.MAX_PAGES = numPages;
-        this.lock = new Lock();
         this.pageInfos = new PageInfo [numPages];
     }
 
@@ -88,17 +68,14 @@ public class BufferPool {
      */
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException, InterruptedException {
-        this.lock.lock();
         for(int i = 0; i < this.pageInfos.length; i++)
         {
             if(this.pageInfos[i].id.equals(pid))
             {
-                this.lock.unlock();
                 return this.pageInfos[i].page;
             } 
         }
         
-        this.lock.unlock();
         return null;
     }
 
