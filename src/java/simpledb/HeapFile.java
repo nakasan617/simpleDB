@@ -154,8 +154,14 @@ public class HeapFile implements DbFile {
         {
             this.currPageNo = 0;
             HeapPageId pid = new HeapPageId(this.tableId, this.currPageNo);
-            HeapPage pg = (HeapPage)this.hf.readPage((PageId)pid);
-            this.tuples = pg.iterator(); 
+            HeapPage pg = null;
+            try {
+                pg = (HeapPage) (Database.getBufferPool().getPage(tid, pid, Permissions.READ_ONLY));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            this.tuples = pg.iterator();
         }
 
         /** @return true if there are more tuples available. */
@@ -201,7 +207,15 @@ public class HeapFile implements DbFile {
                 this.currPageNo++;
                 
                 HeapPageId pid = new HeapPageId(this.tableId, this.currPageNo);
-                tuples = ((HeapPage)this.hf.readPage((PageId)pid)).iterator();
+
+                HeapPage pg = null;
+                try {
+                    pg = (HeapPage) (Database.getBufferPool().getPage(tid, pid, Permissions.READ_ONLY));
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                tuples = pg.iterator();
+
                 if(!tuples.hasNext())
                 {
                     return null;

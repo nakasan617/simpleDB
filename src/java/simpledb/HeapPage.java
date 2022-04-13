@@ -288,7 +288,6 @@ public class HeapPage implements Page {
                     rv++;
                 tmp = tmp >> 1;
             }
-            
         }
         return rv;
     }

@@ -1,6 +1,7 @@
 package simpledb;
 
 import java.io.*;
+import java.util.*;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -13,22 +14,15 @@ import java.io.*;
  */
 public class BufferPool {
     private class PageInfo {
+        public PageId pid;
         public Page page;
-        public PageId id;
-        public int timeStamp; 
+        public long timeStamp;
 
-        public PageInfo()
+        PageInfo(PageId pid_, Page page_, long timeStamp_)
         {
-            page = null;
-            id = null;
-            timeStamp = -1;
-        }
-
-        public PageInfo(Page _page, PageId _id, int _timeStamp)
-        {
-            page = _page;
-            id = _id;
-            timeStamp = _timeStamp;
+            pid = pid_;
+            page = page_;
+            timeStamp = timeStamp_;
         }
     }
    /** Bytes per page, including header. */
@@ -39,7 +33,9 @@ public class BufferPool {
     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
     private int MAX_PAGES;
-    private PageInfo pageInfos [];
+    private HashMap<PageId, PageInfo> cache;
+    //private HashMap<int, PageId> page2evict;
+    private long currTimeStamp;
 
     /**
      * Creates a BufferPool that caches up to numPages pages.
@@ -48,7 +44,9 @@ public class BufferPool {
      */
     public BufferPool(int numPages) {
         this.MAX_PAGES = numPages;
-        this.pageInfos = new PageInfo [numPages];
+        this.cache = new HashMap<PageId, PageInfo> ();
+        //this.page2evict = new HashMap<int, PageId> ();
+        this.currTimeStamp = 0;
     }
 
     /**
@@ -68,15 +66,32 @@ public class BufferPool {
      */
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException, InterruptedException {
-        for(int i = 0; i < this.pageInfos.length; i++)
+        if(cache.containsKey(pid))
         {
-            if(this.pageInfos[i].id.equals(pid))
-            {
-                return this.pageInfos[i].page;
-            } 
+            PageInfo pageInfo = this.cache.get(pid);
+            long pastTimeStamp = pageInfo.timeStamp;
+            pageInfo.timeStamp = this.currTimeStamp;
+            this.currTimeStamp++;
+            return pageInfo.page;
         }
-        
-        return null;
+        else
+        {
+            // you need to retrieve it from HeapFile
+            if(cache.size() >= this.MAX_PAGES)
+            {
+                throw new DbException("have not implemented because it requires evict");
+            }
+            else
+            {
+                HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(pid.getTableId());
+                Page pg = (Page)hf.readPage(pid);
+                PageInfo pageInfo = new PageInfo(pid, pg, this.currTimeStamp);
+                cache.put(pid, pageInfo);
+                this.currTimeStamp++;
+                return pg;
+            }
+
+        }
     }
 
     /**
