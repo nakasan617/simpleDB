@@ -1,7 +1,36 @@
-Here I have HeapPage ready.
+Here I have everything ready
 
-Design Decisions
-- I have created ArrayList in TupleDesc. Why? -> I needed arraylike datastructure for the TDItems and the size had to be malleable.
+Design Decisions/Justifications of Any Change
+    at TupleTest and TupleDescTest
+    - I have created ArrayList in TupleDesc. Why? -> I needed arraylike datastructure for the TDItems and the size had to be malleable.
+    - I have added toString method HeapPageId and PageId to make getting the hashCode easier.
 
-- I have added toString method HeapPageId and PageId to make getting the hashCode easier.
+    at CatalogTest
+    - I created a class called table to keep all the data for addTable in a bundle.
+    - I needed some sort of way to keep multiple tables, so I chose ArrayList.
+
+    at BufferPool
+    - I am currently not thinking about the eviction of the page since in BufferPool.java, the method evict is said to be not necessary at this point.
+    - This one I changed a lot after getting stuck with the last system test with HeapFile
+
+    at HeapPageId, RecordId, HeapPageRead
+    - Discussed a lot in the class, so was not really hard for me
+
+    at HeapFile
+    - I spent the most time on this phase
+    - I have added HeapFileIterator in HeapFile.java -> because the DbFileIterator was just an abstract class.
+
+Any missing or incomplete elements of my code
+    I think I am fine but if the test case tests if I can evict the page or not, I am not ready yet
+    (and that is because evicting page was not supposed to be implemented at this point!).
+
+How long I spent in the lab, whether there was anything I found particularly difficult or confusing
+    I spent around 30 hours total.
+    I found the dependency issues always difficult to resolve, and I was consistently confused how each class interacted with each other in the begginning.
+    BufferPool was particularly confusing since it doesn't even have a test until the last moment, I spent 3, 4 hours just rummaging through the code and slides
+    of how they interacted with other classes.
+    It was hard to debug for me, if I can run the code somehow and create a break point in an IDE to see the stack trace,
+    I think I would have saved 2 hours debugging the code, especially for the last test which deals with BufferPool at the end.
+
+
 
