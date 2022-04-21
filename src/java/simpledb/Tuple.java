@@ -70,7 +70,6 @@ public class Tuple implements Serializable {
      *            new value for the field.
      */
     public void setField(int i, Field f) {
-        // some code goes here
         this.contents[i] = f;
     }
 
@@ -81,7 +80,6 @@ public class Tuple implements Serializable {
      *            field index to return. Must be a valid index.
      */
     public Field getField(int i) {
-        // some code goes here
         return this.contents[i];
     }
 

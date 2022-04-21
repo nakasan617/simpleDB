@@ -11,7 +11,7 @@ public class JoinPredicate implements Serializable {
     private static final long serialVersionUID = 1L;
 
     int field1;
-    Predicate.op op;
+    Predicate.Op op;
     int field2;
     /**
      * Constructor -- create a new predicate over two fields of two tuples.
@@ -40,7 +40,7 @@ public class JoinPredicate implements Serializable {
      * @return true if the tuples satisfy the predicate.
      */
     public boolean filter(Tuple t1, Tuple t2) {
-        return false;
+        return t1.getField(this.field1).compare(this.op, t2.getField(this.field2));
     }
     
     public int getField1()
