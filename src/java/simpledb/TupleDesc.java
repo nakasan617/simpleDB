@@ -78,7 +78,6 @@ public class TupleDesc implements Serializable {
      *            TupleDesc. It must contain at least one entry.
      */
     public TupleDesc(Type[] typeAr) {
-        // some code goes here
         fields = new ArrayList<TDItem>(); 
         for(int i = 0; i < typeAr.length; i++)
         {
@@ -90,7 +89,6 @@ public class TupleDesc implements Serializable {
      * @return the number of fields in this TupleDesc
      */
     public int numFields() {
-        // some code goes here
         return fields.size();
     }
 
