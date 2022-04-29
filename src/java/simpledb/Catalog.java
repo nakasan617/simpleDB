@@ -50,7 +50,6 @@ public class Catalog {
      * conflict exists, use the last table to be added as the table for a given name.
      */
     public void addTable(DbFile file, String name, String pkeyField) {
-        // some code goes here
         this.Tables.add(new Table(file, name, pkeyField));
     }
 

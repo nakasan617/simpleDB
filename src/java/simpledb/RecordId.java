@@ -39,7 +39,6 @@ public class RecordId implements Serializable {
      * @return the page id this RecordId references.
      */
     public PageId getPageId() {
-        // some code goes here
         return this.Pid;
     }
 

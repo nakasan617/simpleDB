@@ -8,6 +8,9 @@ public class Insert extends Operator {
 
     private static final long serialVersionUID = 1L;
 
+    TransactionId transactionId;
+    DbIterator dbIterator;
+    int tableId;
     /**
      * Constructor.
      * 
@@ -23,24 +26,27 @@ public class Insert extends Operator {
      */
     public Insert(TransactionId t,DbIterator child, int tableid)
             throws DbException {
-        // some code goes here
+        this.transactionId = t;
+        this.dbIterator = child;
+        this.tableId = tableid;
     }
 
     public TupleDesc getTupleDesc() {
-        // some code goes here
-        return null;
+        return ((HeapFileIterator)this.dbIterator).hf.getTupleDesc();
     }
 
     public void open() throws DbException, TransactionAbortedException {
-        // some code goes here
+        super.open();
+        dbIterator.open();
     }
 
     public void close() {
-        // some code goes here
+        super.close();
+        dbIterator.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
-        // some code goes here
+        dbIterator.rewind();
     }
 
     /**
