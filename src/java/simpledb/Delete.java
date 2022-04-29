@@ -10,6 +10,9 @@ public class Delete extends Operator {
 
     private static final long serialVersionUID = 1L;
 
+    TransactionId transactionId;
+    DbIterator child;
+    boolean calledOnce;
     /**
      * Constructor specifying the transaction that this delete belongs to as
      * well as the child to read from.
@@ -20,24 +23,27 @@ public class Delete extends Operator {
      *            The child operator from which to read tuples for deletion
      */
     public Delete(TransactionId t, DbIterator child) {
-        // some code goes here
+        this.transactionId = t;
+        this.child = child;
+        this.calledOnce = false;
     }
 
     public TupleDesc getTupleDesc() {
-        // some code goes here
-        return null;
+        return child.getTupleDesc();
     }
 
     public void open() throws DbException, TransactionAbortedException {
-        // some code goes here
+        super.open();
+        child.open();
     }
 
     public void close() {
-        // some code goes here
+        super.close();
+        child.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
-        // some code goes here
+        child.rewind();
     }
 
     /**
@@ -50,19 +56,32 @@ public class Delete extends Operator {
      * @see BufferPool#deleteTuple
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
-        // some code goes here
-        return null;
+        if(this.calledOnce == true)
+            return null;
+        // else
+        BufferPool bufferPool = Database.getBufferPool();
+        int numDeleted = 0;
+        Tuple tuple = null;
+        while(child.hasNext()) {
+            tuple = child.next();
+            bufferPool.deleteTuple(this.transactionId, tuple);
+            numDeleted++;
+        }
+        return Utility.getHeapTuple(numDeleted);
+
     }
 
     @Override
     public DbIterator[] getChildren() {
-        // some code goes here
-        return null;
+        DbIterator [] dbIterator = new DbIterator[1];
+        dbIterator[0] = this.child;
+        return dbIterator;
     }
 
     @Override
     public void setChildren(DbIterator[] children) {
-        // some code goes here
+        assert children.length > 0;
+        this.child = children[0];
     }
 
 }

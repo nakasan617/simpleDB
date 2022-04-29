@@ -1,5 +1,7 @@
 package simpledb;
 
+import java.io.IOException;
+
 /**
  * Inserts tuples read from the child operator into the tableid specified in the
  * constructor
@@ -11,6 +13,7 @@ public class Insert extends Operator {
     TransactionId transactionId;
     DbIterator dbIterator;
     int tableId;
+    boolean calledOnce;
     /**
      * Constructor.
      * 
@@ -29,10 +32,12 @@ public class Insert extends Operator {
         this.transactionId = t;
         this.dbIterator = child;
         this.tableId = tableid;
+        this.calledOnce = false;
     }
 
     public TupleDesc getTupleDesc() {
-        return ((HeapFileIterator)this.dbIterator).hf.getTupleDesc();
+//        return Database.getCatalog().getTupleDesc(this.tableId);
+        return this.dbIterator.getTupleDesc();
     }
 
     public void open() throws DbException, TransactionAbortedException {
@@ -63,18 +68,36 @@ public class Insert extends Operator {
      * @see BufferPool#insertTuple
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
-        // some code goes here
-        return null;
+        if(this.calledOnce == true)
+            return null;
+        // else
+        this.calledOnce = true;
+        int numInserted = 0;
+        Tuple next = null;
+        BufferPool bufferPool = Database.getBufferPool();
+
+        try {
+            while (dbIterator.hasNext()) {
+                next = dbIterator.next();
+                bufferPool.insertTuple(this.transactionId, this.tableId, next);
+                numInserted++;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        // you need to create the returning tuple
+        return Utility.getHeapTuple(numInserted);
     }
 
     @Override
     public DbIterator[] getChildren() {
-        // some code goes here
-        return null;
+        DbIterator [] iterators = new DbIterator[1];
+        iterators[0] = this.dbIterator;
+        return iterators;
     }
 
     @Override
     public void setChildren(DbIterator[] children) {
-        // some code goes here
+        this.dbIterator = children[0];
     }
 }
