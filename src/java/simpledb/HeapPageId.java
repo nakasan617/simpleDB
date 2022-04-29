@@ -13,14 +13,12 @@ public class HeapPageId implements PageId {
     private int TableId;
     private int PageNo;
     public HeapPageId(int tableId, int pgNo) {
-        // some code goes here
         this.TableId = tableId;
         this.PageNo = pgNo;
     }
 
     /** @return the table associated with this PageId */
     public int getTableId() {
-        // some code goes here
         return TableId;
     }
 
@@ -29,7 +27,6 @@ public class HeapPageId implements PageId {
      *   this PageId
      */
     public int pageNumber() {
-        // some code goes here
         return PageNo;
     }
 
@@ -52,7 +49,6 @@ public class HeapPageId implements PageId {
      *   ids are the same)
      */
     public boolean equals(Object o) {
-        // some code goes here
         if(o == null || !(o instanceof HeapPageId))
             return false;
         HeapPageId hp = (HeapPageId)o;

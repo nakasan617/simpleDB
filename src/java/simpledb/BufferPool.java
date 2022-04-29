@@ -24,6 +24,10 @@ public class BufferPool {
             page = page_;
             timeStamp = timeStamp_;
         }
+
+        Page getPage() {
+            return this.page;
+        }
     }
    /** Bytes per page, including header. */
     public static final int PAGE_SIZE = 4096;
@@ -36,6 +40,8 @@ public class BufferPool {
     private HashMap<PageId, PageInfo> cache;
     //private HashMap<int, PageId> page2evict;
     private long currTimeStamp;
+    private HashMap<TransactionId, HashSet<PageId>> tidConverter;
+    private ArrayList<PageId> page2evict;
 
     /**
      * Creates a BufferPool that caches up to numPages pages.
@@ -45,7 +51,9 @@ public class BufferPool {
     public BufferPool(int numPages) {
         this.MAX_PAGES = numPages;
         this.cache = new HashMap<PageId, PageInfo> ();
+        this.tidConverter = new HashMap<TransactionId, HashSet<PageId>> ();
         //this.page2evict = new HashMap<int, PageId> ();
+        this.page2evict = new ArrayList<PageId> ();
         this.currTimeStamp = 0;
     }
 
@@ -79,14 +87,32 @@ public class BufferPool {
             // you need to retrieve it from HeapFile
             if(cache.size() >= this.MAX_PAGES)
             {
-                throw new DbException("have not implemented because it requires evict");
+                HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(pid.getTableId());
+                Page pg = (Page)hf.readPage(pid);
+                PageInfo pageInfo = new PageInfo(pid, pg, this.currTimeStamp);
+                this.cache.put(pid, pageInfo);
+
+                PageId evictingPageId = this.page2evict.get(0);
+                this.page2evict.remove(0);
+                this.page2evict.add(pid);
+
+                this.cache.remove(evictingPageId);
+                this.tidConverter.put(tid, new HashSet<PageId> ());
+                this.tidConverter.get(tid).add(pid);
+                this.currTimeStamp++;
+                return pg;
             }
             else
             {
                 HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(pid.getTableId());
                 Page pg = (Page)hf.readPage(pid);
                 PageInfo pageInfo = new PageInfo(pid, pg, this.currTimeStamp);
-                cache.put(pid, pageInfo);
+                this.cache.put(pid, pageInfo);
+
+                this.page2evict.add(pid);
+
+                this.tidConverter.put(tid, new HashSet<PageId> ());
+                this.tidConverter.get(tid).add(pid);
                 this.currTimeStamp++;
                 return pg;
             }
@@ -157,9 +183,14 @@ public class BufferPool {
         HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(tableId);
         ArrayList<Page> pages = hf.insertTuple(tid, t);
         Page pg;
-        for(int i = 0; i < pages.size(); i++)
-        {
-            pages.get(i).markDirty(true, tid); 
+
+        if(!this.tidConverter.containsKey(tid)) {
+            this.tidConverter.put(tid, new HashSet<PageId> ());
+        }
+
+        for(int i = 0; i < pages.size(); i++) {
+            pages.get(i).markDirty(true, tid);
+            this.tidConverter.get(tid).add(pages.get(i).getId());
         }
 
     }
@@ -183,6 +214,14 @@ public class BufferPool {
         HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(tableId);
         Page pg = hf.deleteTuple(tid, t); 
         pg.markDirty(true, tid);
+        PageInfo pi = new PageInfo(pg.getId(), pg, this.currTimeStamp);
+        this.cache.put(pg.getId(), pi);
+        this.currTimeStamp++;
+
+        if(!this.tidConverter.containsKey(tid)) {
+            this.tidConverter.put(tid, new HashSet<PageId> ());
+        }
+        this.tidConverter.get(tid).add(pg.getId());
     }
 
     /**
@@ -191,9 +230,10 @@ public class BufferPool {
      *     break simpledb if running in NO STEAL mode.
      */
     public synchronized void flushAllPages() throws IOException {
-        // some code goes here
-        // not necessary for proj1
-
+        for(TransactionId tid: this.tidConverter.keySet())
+        {
+            this.flushPages(tid);
+        }
     }
 
     /** Remove the specific page id from the buffer pool.
@@ -202,8 +242,15 @@ public class BufferPool {
         cache.
     */
     public synchronized void discardPage(PageId pid) {
-        // some code goes here
-	// not necessary for proj1
+        if(this.cache.containsKey(pid)) {
+            this.cache.remove(pid);
+        }
+
+        for(int i = 0; i < this.page2evict.size(); i++) {
+            if(page2evict.get(i).equals(pid)) {
+                page2evict.remove(i);
+            }
+        }
     }
 
     /**
@@ -211,15 +258,26 @@ public class BufferPool {
      * @param pid an ID indicating the page to flush
      */
     private synchronized  void flushPage(PageId pid) throws IOException {
-        // some code goes here
-        // not necessary for proj1
+        Page page = this.cache.get(pid).page;
+        // I need to get the HeapFile
+        DbFile dbFile = Database.getCatalog().getDbFile(pid.getTableId());
+        dbFile.writePage(page);
+        page.markDirty(false, null);
     }
 
     /** Write all pages of the specified transaction to disk.
      */
     public synchronized  void flushPages(TransactionId tid) throws IOException {
-        // some code goes here
-        // not necessary for proj1
+        Iterator<PageId> pageIds = this.tidConverter.get(tid).iterator();
+        PageInfo pageInfo = null;
+        PageId pid = null;
+        Page page = null;
+        while(pageIds.hasNext()) {
+            page = this.cache.get(pageIds.next()).getPage();
+            if(page.isDirty() != null) {
+                this.flushPage(page.getId());
+            }
+        }
     }
 
     /**
@@ -227,8 +285,17 @@ public class BufferPool {
      * Flushes the page to disk to ensure dirty pages are updated on disk.
      */
     private synchronized  void evictPage() throws DbException {
-        // some code goes here
-        // not necessary for proj1
+        PageId evictingPageId = this.page2evict.get(0);
+        Page page = this.cache.get(evictingPageId).page;
+        this.page2evict.remove(0);
+        try {
+            if (page.isDirty() != null) {
+                this.flushPage(evictingPageId);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        this.cache.remove(evictingPageId);
     }
 
 }
