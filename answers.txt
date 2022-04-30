@@ -1,5 +1,6 @@
-Here I have everything ready
+# Here I have Lab2 Ready #
 
+### at Lab 1 ###
 Design Decisions/Justifications of Any Change
     at TupleTest and TupleDescTest
     - I have created ArrayList in TupleDesc. Why? -> I needed arraylike datastructure for the TDItems and the size had to be malleable.
@@ -21,7 +22,6 @@ Design Decisions/Justifications of Any Change
     - I have added HeapFileIterator in HeapFile.java -> because the DbFileIterator was just an abstract class.
 
     at SeqScan
-    - This one I am still confused with. I put whatever is in the constructor as fields and retrieved them as they are asked.
     - This took me significant amount of time too, because you have to change all the other files to make this work.
 
 Any missing or incomplete elements of my code
@@ -37,4 +37,20 @@ How long I spent in the lab, whether there was anything I found particularly dif
     I think I would have saved 2 hours debugging the code, especially for the last test which deals with BufferPool at the end.
 
 
+### at Lab 2 ###
+Design Decisions/Justification of Any Change
+- I have made the page eviction policy just popping the page that is used the oldest. This was because it was simpler to implement than LRU cache, and somewhat closer to the LRU cache. I didn't want to implement the LRU because when you use the same page that you have used, you need to update the timestamp, and change the order of eviction
 
+BufferPool.java
+- I have tidConverter because flushPages took the argument tid
+- page2evict is the one that decides the page to evict
+
+Delete.java/Insert.java
+- it adds calledOnce for both so that when the Operators are called two or more times, it wouldn't work
+
+HeapFile.java/HeapPage.java
+- I have added header2String and toString for debugging purposes. I left it because I will need it for the later labs.
+- InsertTuple for HeapFile.java sees if there is any pages that has empty slots, if not it creates new pages and writes the page. 
+
+- I should not have any missing part of the code.
+- I spent around 15 - 20 hours on this lab.
