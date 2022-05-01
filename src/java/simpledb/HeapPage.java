@@ -68,26 +68,6 @@ public class HeapPage implements Page {
         this.isPageDirty = false;
     }
 
-    /*
-    public HeapPage(HeapPageId id) throws IOException {
-        this.pid = id;
-        this.td = Database.getCatalog().getTupleDesc(id.getTableId());
-        this.numSlots = this.getNumTuples();
-        this.header = new byte[this.getHeaderSize()];
-
-        for(int i = 0; i < header.length; i++) { 
-            this.header[i] = 0;
-        } 
-
-        tuples = new Tuple[this.numSlots];
-        for(int i = 0; i < tuples.length; i++)
-            tuples[i] = null;
-        setBeforeImage();
-        this.tid = null;
-        this.isPageDirty = false;
-    }
-    */
-
     /** Retrieve the number of tuples on this page.
         @return the number of tuples on this page
     */
@@ -265,7 +245,6 @@ public class HeapPage implements Page {
     public void deleteTuple(Tuple t) throws DbException {
         RecordId rid = t.getRecordId();
         int tupleNo = rid.tupleno();
-//        System.out.println("tupleNo: " + tupleNo);
         if(rid.getPageId() != this.getId()) {
             throw new DbException("RecordId mismatch!");
         }

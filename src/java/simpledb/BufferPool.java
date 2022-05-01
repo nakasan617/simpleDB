@@ -87,33 +87,40 @@ public class BufferPool {
             // you need to retrieve it from HeapFile
             if(cache.size() >= this.MAX_PAGES)
             {
+//                System.out.println("option to evict page");
                 HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(pid.getTableId());
                 Page pg = (Page)hf.readPage(pid);
                 PageInfo pageInfo = new PageInfo(pid, pg, this.currTimeStamp);
                 this.cache.put(pid, pageInfo);
 
-                PageId evictingPageId = this.page2evict.get(0);
-                this.page2evict.remove(0);
+                this.evictPage();
                 this.page2evict.add(pid);
 
-                this.cache.remove(evictingPageId);
-                this.tidConverter.put(tid, new HashSet<PageId> ());
+
                 this.tidConverter.get(tid).add(pid);
                 this.currTimeStamp++;
                 return pg;
             }
             else
             {
+//                System.out.println("other option to not to evict page");
                 HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(pid.getTableId());
                 Page pg = (Page)hf.readPage(pid);
                 PageInfo pageInfo = new PageInfo(pid, pg, this.currTimeStamp);
                 this.cache.put(pid, pageInfo);
 
                 this.page2evict.add(pid);
-
-                this.tidConverter.put(tid, new HashSet<PageId> ());
+                if(!this.tidConverter.containsKey(tid)) {
+                    this.tidConverter.put(tid, new HashSet<PageId>());
+                }
                 this.tidConverter.get(tid).add(pid);
                 this.currTimeStamp++;
+////                System.out.println("pg == null: " + (pg == null));
+//                if(pg != null)
+//                {
+//                    System.out.println(pg.toString());
+//                }
+
                 return pg;
             }
 

@@ -23,6 +23,7 @@ public class HeapFile implements DbFile {
         int currPageNo;
         HeapFile hf;
         Iterator<Tuple> tuples;
+        HeapPageId pid;
         // above is just a tuples of the current page,
         // so you have to renew it everytime you open another page
 
@@ -60,19 +61,24 @@ public class HeapFile implements DbFile {
         public boolean hasNext()
                 throws DbException, TransactionAbortedException
         {
-            if(tuples == null)
-            {
+            if(tuples == null) {
                 return false;
             }
-
-            if(!tuples.hasNext() && this.currPageNo + 1 == this.numPages)
-            {
-                return false;
-            }
-            else
-            {
+            if(tuples.hasNext()) {
                 return true;
             }
+
+            if(this.currPageNo + 1 < this.numPages) {
+                this.currPageNo++;
+                this.pid = new HeapPageId(this.hf.getId(), this.currPageNo);
+                try {
+                    this.tuples = ((HeapPage) Database.getBufferPool().getPage(tid, pid, Permissions.READ_ONLY)).iterator();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return this.tuples.hasNext();
+            }
+            return false;
         }
 
         /**
@@ -86,38 +92,8 @@ public class HeapFile implements DbFile {
                 throws DbException, TransactionAbortedException, NoSuchElementException
         {
             if(!this.hasNext())
-            {
-                throw new NoSuchElementException();
-            }
-
-            if(tuples.hasNext())
-            {
-                return tuples.next();
-            }
-            else
-            {
-                this.currPageNo++;
-
-                HeapPageId pid = new HeapPageId(this.tableId, this.currPageNo);
-
-                HeapPage pg = null;
-                try {
-                    pg = (HeapPage) (Database.getBufferPool().getPage(tid, pid, Permissions.READ_ONLY));
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                tuples = pg.iterator();
-
-                if(!tuples.hasNext())
-                {
-                    return null;
-                }
-                else
-                {
-                    return tuples.next();
-                }
-            }
-
+                throw new NoSuchElementException("there is no next tuple");
+            return this.tuples.next();
         }
 
         /**
