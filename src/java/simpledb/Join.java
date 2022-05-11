@@ -9,12 +9,6 @@ public class Join extends Operator {
 
     private static final long serialVersionUID = 1L;
 
-    JoinPredicate p;
-    DbIterator child1;
-    DbIterator child2;
-    ArrayList<Tuple> tuples; // this is a joined tuples, which is created when it is opened
-    int currIndex;
-    TupleDesc td;
     /**
      * Constructor. Accepts to children to join and the predicate to join them
      * on
@@ -27,16 +21,12 @@ public class Join extends Operator {
      *            Iterator for the right(inner) relation to join
      */
     public Join(JoinPredicate p, DbIterator child1, DbIterator child2) {
-        this.p = p;
-        this.child1 = child1;
-        this.child2 = child2;
-        this.tuples = null;
-        this.currIndex = 0;
-        this.td = null;
+        // some code goes here
     }
 
     public JoinPredicate getJoinPredicate() {
-        return this.p;
+        // some code goes here
+        return null;
     }
 
     /**
@@ -45,7 +35,8 @@ public class Join extends Operator {
      *       alias or table name.
      * */
     public String getJoinField1Name() {
-        return this.child1.getTupleDesc().getFieldName(this.p.getField1());
+        // some code goes here
+        return null;
     }
 
     /**
@@ -54,7 +45,8 @@ public class Join extends Operator {
      *       alias or table name.
      * */
     public String getJoinField2Name() {
-        return this.child2.getTupleDesc().getFieldName(this.p.getField2());
+        // some code goes here
+        return null;
     }
 
     /**
@@ -62,71 +54,21 @@ public class Join extends Operator {
      *      implementation logic.
      */
     public TupleDesc getTupleDesc() {
-        if(td == null)
-        {
-            td = TupleDesc.merge(this.child1.getTupleDesc(), this.child2.getTupleDesc());
-        }
-        return td;
+        // some code goes here
+        return null;
     }
 
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
-        super.open();
-        // I need to create a tuple that are joined
-        if(this.tuples == null) {
-            this.tuples = new ArrayList<Tuple>();
-            this.currIndex = 0;
-
-            child1.open();
-            child2.open();
-            ArrayList<Tuple> rows = new ArrayList<Tuple>();
-            ArrayList<Tuple> columns = new ArrayList<Tuple>();
-            while(child1.hasNext()) {
-                rows.add(child1.next());
-            }
-            while(child2.hasNext()) {
-                columns.add(child2.next());
-            }
-
-            Tuple tuple1 = null;
-            Tuple tuple2 = null;
-            Tuple newTuple = null;
-
-            for(int x = 0; x < rows.size(); x++) {
-                tuple1 = rows.get(x);
-                for(int y = 0; y < columns.size(); y++) {
-                    tuple2 = columns.get(y);
-                    // you have 2 tuples necessary to make another tuple
-                    if(this.p.filter(tuple1, tuple2) == true) {
-                        newTuple = new Tuple(this.getTupleDesc());
-                        for (int i = 0; i < tuple1.getTupleDesc().numFields(); i++) {
-                            newTuple.setField(i, tuple1.getField(i));
-                        }
-                        int j = tuple1.getTupleDesc().numFields();
-                        for (int i = 0; i < tuple2.getTupleDesc().numFields(); i++) {
-                            newTuple.setField(j, tuple2.getField(i));
-                            j++;
-                        }
-                        this.tuples.add(newTuple);
-                    }
-                }
-            }
-            child1.close();
-            child2.close();
-        }
-        else {
-            this.currIndex = 0;
-        }
+        // some code goes here
     }
 
     public void close() {
-        super.close();
-        this.currIndex = 0;
+        // some code goes here
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
-        this.close();
-        this.open();
+        // some code goes here
     }
 
     /**
@@ -148,32 +90,19 @@ public class Join extends Operator {
      * @see JoinPredicate#filter
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
-        if(this.currIndex >= this.tuples.size())
-            return null;
-        Tuple tuple = this.tuples.get(this.currIndex);
-        this.currIndex++;
-        return tuple;
+        // some code goes here
+        return null;
     }
 
     @Override
     public DbIterator[] getChildren() {
-        DbIterator [] dbIterator = new DbIterator[2];
-        dbIterator[0] = this.child1;
-        dbIterator[1] = this.child2;
-        return dbIterator;
+        // some code goes here
+        return null;
     }
 
     @Override
     public void setChildren(DbIterator[] children) {
-        if(children.length < 2)
-        {
-            // don't do anything
-        }
-        else
-        {
-            this.child1 = children[0];
-            this.child2 = children[1];
-        }
+        // some code goes here
     }
 
 }

@@ -1,7 +1,5 @@
 package simpledb;
 
-import java.io.IOException;
-
 /**
  * Inserts tuples read from the child operator into the tableid specified in the
  * constructor
@@ -10,10 +8,6 @@ public class Insert extends Operator {
 
     private static final long serialVersionUID = 1L;
 
-    TransactionId transactionId;
-    DbIterator dbIterator;
-    int tableId;
-    boolean calledOnce;
     /**
      * Constructor.
      * 
@@ -29,29 +23,24 @@ public class Insert extends Operator {
      */
     public Insert(TransactionId t,DbIterator child, int tableid)
             throws DbException {
-        this.transactionId = t;
-        this.dbIterator = child;
-        this.tableId = tableid;
-        this.calledOnce = false;
+        // some code goes here
     }
 
     public TupleDesc getTupleDesc() {
-//        return Database.getCatalog().getTupleDesc(this.tableId);
-        return this.dbIterator.getTupleDesc();
+        // some code goes here
+        return null;
     }
 
     public void open() throws DbException, TransactionAbortedException {
-        super.open();
-        dbIterator.open();
+        // some code goes here
     }
 
     public void close() {
-        super.close();
-        dbIterator.close();
+        // some code goes here
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
-        dbIterator.rewind();
+        // some code goes here
     }
 
     /**
@@ -68,36 +57,18 @@ public class Insert extends Operator {
      * @see BufferPool#insertTuple
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
-        if(this.calledOnce == true)
-            return null;
-        // else
-        this.calledOnce = true;
-        int numInserted = 0;
-        Tuple next = null;
-        BufferPool bufferPool = Database.getBufferPool();
-
-        try {
-            while (dbIterator.hasNext()) {
-                next = dbIterator.next();
-                bufferPool.insertTuple(this.transactionId, this.tableId, next);
-                numInserted++;
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        // you need to create the returning tuple
-        return Utility.getHeapTuple(numInserted);
+        // some code goes here
+        return null;
     }
 
     @Override
     public DbIterator[] getChildren() {
-        DbIterator [] iterators = new DbIterator[1];
-        iterators[0] = this.dbIterator;
-        return iterators;
+        // some code goes here
+        return null;
     }
 
     @Override
     public void setChildren(DbIterator[] children) {
-        this.dbIterator = children[0];
+        // some code goes here
     }
 }

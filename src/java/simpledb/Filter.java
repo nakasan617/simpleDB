@@ -9,8 +9,6 @@ public class Filter extends Operator {
 
     private static final long serialVersionUID = 1L;
 
-    Predicate p;
-    ArrayList<DbIterator> children;
     /**
      * Constructor accepts a predicate to apply and a child operator to read
      * tuples to filter from.
@@ -21,33 +19,30 @@ public class Filter extends Operator {
      *            The child operator
      */
     public Filter(Predicate p, DbIterator child) {
-        // getChildren setChildren are not even tested, just use the first element all the time for now.
-        this.p = p;
-        this.children = new ArrayList<DbIterator> ();
-        this.children.add(child);
+        // some code goes here
     }
 
     public Predicate getPredicate() {
-        return this.p;
+        // some code goes here
+        return null;
     }
 
     public TupleDesc getTupleDesc() {
-        return this.children.get(0).getTupleDesc();
+        // some code goes here
+        return null;
     }
 
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
-        super.open();
-        this.children.get(0).open();
+        // some code goes here
     }
 
     public void close() {
-        super.close();
-        this.children.get(0).close();
+        // some code goes here
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
-        this.children.get(0).rewind();
+        // some code goes here
     }
 
     /**
@@ -61,37 +56,19 @@ public class Filter extends Operator {
      */
     protected Tuple fetchNext() throws NoSuchElementException,
             TransactionAbortedException, DbException {
-        DbIterator child = this.children.get(0);
-
-        if(child.hasNext() == false)
-            return null;
-
-        Tuple candidate = child.next();
-        while(true) {
-            if(this.p.filter(candidate) == true)
-                return candidate;
-            else if(child.hasNext()) {
-                candidate = child.next();
-            } else {
-                return null;
-            }
-        }
-
+        // some code goes here
+        return null;
     }
 
     @Override
     public DbIterator[] getChildren() {
-        // this is not even tested...
-        return (DbIterator [])this.children.toArray();
+        // some code goes here
+        return null;
     }
 
     @Override
     public void setChildren(DbIterator[] children) {
-        // this is not even tested...
-        this.children = new ArrayList<DbIterator> ();
-        for(int i = 0; i < children.length; i++) {
-            this.children.add(children[i]);
-        }
+        // some code goes here
     }
 
 }
