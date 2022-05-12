@@ -1,4 +1,7 @@
 package simpledb;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Map;
 
 /**
  * Knows how to compute some aggregate over a set of IntFields.
@@ -6,6 +9,15 @@ package simpledb;
 public class IntegerAggregator implements Aggregator {
 
     private static final long serialVersionUID = 1L;
+
+    int gbField;
+    Type gbFieldType;
+    int aggregateField;
+    Op operator;
+    TupleDesc td;
+
+    HashMap<Field, Integer> opAggregator;
+    HashMap<Field, Integer> cntAggregator;
 
     /**
      * Aggregate constructor
@@ -23,7 +35,14 @@ public class IntegerAggregator implements Aggregator {
      */
 
     public IntegerAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
-        // some code goes here
+        assert gbfieldtype == Type.INT_TYPE;
+        this.gbField = gbField;
+        this.gbFieldType = gbfieldtype;
+        this.aggregateField = afield;
+        this.operator = what;
+        this.opAggregator = new HashMap<Field, Integer> ();
+        if(what == Aggregator.Op.AVG) this.cntAggregator = new HashMap<Field, Integer> ();
+        this.td = new TupleDesc(new Type[]{gbfieldtype, Type.INT_TYPE});
     }
 
     /**
@@ -34,7 +53,50 @@ public class IntegerAggregator implements Aggregator {
      *            the Tuple containing an aggregate field and a group-by field
      */
     public void mergeTupleIntoGroup(Tuple tup) {
-        // some code goes here
+        if(this.gbField == NO_GROUPING) {
+            assert false;
+        }
+        Field tmpField = tup.getField(this.gbField);
+        Field appendField = tup.getField(this.aggregateField);
+        if(this.operator == Aggregator.Op.SUM) {
+            if(opAggregator.containsKey(tmpField)) {
+                Integer tmp = opAggregator.get(tmpField) + Integer.valueOf(((IntField) (appendField)).getValue());
+                opAggregator.put(tmpField, tmp);
+            } else {
+                opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
+            }
+        } else if (this.operator == Aggregator.Op.MIN) {
+            if(opAggregator.containsKey(tmpField)) {
+                if(Integer.valueOf(((IntField) (appendField)).getValue()) < opAggregator.get(tmpField)) {
+                    opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
+                }
+
+            } else {
+                opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
+            }
+        } else if (this.operator == Aggregator.Op.MAX) {
+            if(opAggregator.containsKey(tmpField)) {
+                if(Integer.valueOf(((IntField) (appendField)).getValue()) > opAggregator.get(tmpField))
+                    opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
+            } else {
+//                opAggregator[tmpField] = ((IntField) (tmpField)).getValue();
+                opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
+            }
+        } else if (this.operator == Aggregator.Op.AVG) {
+            if(opAggregator.containsKey(tmpField)) {
+                Integer cnt = cntAggregator.get(tmpField);
+                Integer oldAvg = opAggregator.get(tmpField);
+                Integer newAvg = (oldAvg * cnt + Integer.valueOf(((IntField) (appendField)).getValue()))/(cnt + 1);
+                opAggregator.put(tmpField, newAvg);
+                cntAggregator.put(tmpField, cnt + 1);
+            } else {
+//                opAggregator[tmpField] = ((IntField) (tmpField)).getValue();
+                opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
+                cntAggregator.put(tmpField, 1);
+            }
+        } else {
+            assert false;
+        }
     }
 
     /**
@@ -46,9 +108,21 @@ public class IntegerAggregator implements Aggregator {
      *         the constructor.
      */
     public DbIterator iterator() {
-        // some code goes here
-        throw new
-        UnsupportedOperationException("please implement me for lab2");
+        ArrayList<Tuple> tuples = new ArrayList<Tuple> ();
+        if(this.gbField == NO_GROUPING) assert false;
+        // else
+        Tuple currTuple = null;
+        for(Map.Entry element: this.opAggregator.entrySet()) {
+            Field key = (Field)element.getKey();
+            Integer value = (Integer)element.getValue();
+            currTuple = new Tuple(this.td);
+            currTuple.setField(0, key);
+            currTuple.setField(1, new IntField(value.intValue()));
+            tuples.add(currTuple);
+        }
+
+        return new TupleIterator(td, tuples);
+
     }
 
 }
