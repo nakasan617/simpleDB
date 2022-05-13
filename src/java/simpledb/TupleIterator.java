@@ -34,6 +34,7 @@ public class TupleIterator implements DbIterator {
     }
 
     public void open() {
+        assert tuples != null;
         i = tuples.iterator();
     }
 

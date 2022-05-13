@@ -1,4 +1,7 @@
 package simpledb;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
 
 /**
  * Knows how to compute some aggregate over a set of StringFields.
@@ -6,6 +9,13 @@ package simpledb;
 public class StringAggregator implements Aggregator {
 
     private static final long serialVersionUID = 1L;
+    int gbField;
+    Type gbFieldType;
+    int aggregateField;
+    Op operator;
+    TupleDesc td;
+
+    HashMap<Field, Integer> cntAggregator;
 
     /**
      * Aggregate constructor
@@ -17,7 +27,17 @@ public class StringAggregator implements Aggregator {
      */
 
     public StringAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
-        // some code goes here
+        this.gbField = gbfield;
+        this.gbFieldType = gbfieldtype;
+        this.aggregateField = afield;
+        this.operator = what;
+        if(gbfield != NO_GROUPING) {
+            this.cntAggregator = new HashMap<Field, Integer> ();
+            this.td = new TupleDesc(new Type[]{gbfieldtype, Type.INT_TYPE});
+        } else {
+            this.cntAggregator = new HashMap<Field, Integer> ();
+            this.td = new TupleDesc(new Type[]{gbfieldtype});
+        }
     }
 
     /**
@@ -25,7 +45,18 @@ public class StringAggregator implements Aggregator {
      * @param tup the Tuple containing an aggregate field and a group-by field
      */
     public void mergeTupleIntoGroup(Tuple tup) {
-        // some code goes here
+        Field tmpField = tup.getField(this.gbField);
+        if(this.gbField == NO_GROUPING) {
+            this.cntAggregator.put(tmpField, 0);
+        } else {
+            if(this.operator == Aggregator.Op.COUNT) {
+                if(this.cntAggregator.containsKey(tmpField)) {
+                    this.cntAggregator.put(tmpField, this.cntAggregator.get(tmpField) + 1);
+                } else {
+                    this.cntAggregator.put(tmpField, 1);
+                }
+            }
+        }
     }
 
     /**
@@ -37,8 +68,19 @@ public class StringAggregator implements Aggregator {
      *   aggregate specified in the constructor.
      */
     public DbIterator iterator() {
-        // some code goes here
-        throw new UnsupportedOperationException("please implement me for lab2");
+        ArrayList<Tuple> tuples = new ArrayList<Tuple> ();
+        Tuple currTuple = null;
+        for(Map.Entry element: this.cntAggregator.entrySet()) {
+            Field key = (Field)element.getKey();
+            Integer value = (Integer)element.getValue();
+            currTuple = new Tuple(this.td);
+            currTuple.setField(0, key);
+            if(this.gbField != NO_GROUPING) {
+                currTuple.setField(1, new IntField(value.intValue()));
+            }
+            tuples.add(currTuple);
+        }
+        return new TupleIterator(td, tuples);
     }
 
 }

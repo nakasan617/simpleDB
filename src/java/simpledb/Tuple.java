@@ -68,6 +68,8 @@ public class Tuple implements Serializable {
      *            new value for the field.
      */
     public void setField(int i, Field f) {
+        if(i < 0 || i >= this.contents.length)
+            System.out.println("i: " + i + " where contents.length: " + this.contents.length);
         this.contents[i] = f;
     }
 
@@ -90,7 +92,6 @@ public class Tuple implements Serializable {
      * where \t is any whitespace, except newline, and \n is a newline
      */
     public String toString() {
-        // some code goes here
         String str = "";
         for(int i = 0; i < this.contents.length; i++)
         {

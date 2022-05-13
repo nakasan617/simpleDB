@@ -17,7 +17,11 @@ public class IntegerAggregator implements Aggregator {
     TupleDesc td;
 
     HashMap<Field, Integer> opAggregator;
+    HashMap<Field, Integer> sumAggregator;
     HashMap<Field, Integer> cntAggregator;
+    Integer sum;
+    Integer cnt;
+    Integer num;
 
     /**
      * Aggregate constructor
@@ -35,14 +39,27 @@ public class IntegerAggregator implements Aggregator {
      */
 
     public IntegerAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
-        assert gbfieldtype == Type.INT_TYPE;
-        this.gbField = gbField;
+        this.gbField = gbfield;
         this.gbFieldType = gbfieldtype;
         this.aggregateField = afield;
         this.operator = what;
-        this.opAggregator = new HashMap<Field, Integer> ();
-        if(what == Aggregator.Op.AVG) this.cntAggregator = new HashMap<Field, Integer> ();
-        this.td = new TupleDesc(new Type[]{gbfieldtype, Type.INT_TYPE});
+        if(gbfield != NO_GROUPING) {
+            this.opAggregator = new HashMap<Field, Integer> ();
+            if(what == Aggregator.Op.AVG) {
+                this.cntAggregator = new HashMap<Field, Integer> ();
+                this.sumAggregator = new HashMap<Field, Integer> ();
+            }
+            this.td = new TupleDesc(new Type[]{gbfieldtype, Type.INT_TYPE});
+        } else {
+            sum = 0;
+            cnt = 0;
+            if(what == Aggregator.Op.MIN) {
+                num = Integer.MAX_VALUE;
+            } else if(what == Aggregator.Op.MAX) {
+                num = Integer.MIN_VALUE;
+            }
+            this.td = new TupleDesc(new Type[]{gbfieldtype});
+        }
     }
 
     /**
@@ -53,49 +70,73 @@ public class IntegerAggregator implements Aggregator {
      *            the Tuple containing an aggregate field and a group-by field
      */
     public void mergeTupleIntoGroup(Tuple tup) {
+
         if(this.gbField == NO_GROUPING) {
-            assert false;
-        }
-        Field tmpField = tup.getField(this.gbField);
-        Field appendField = tup.getField(this.aggregateField);
-        if(this.operator == Aggregator.Op.SUM) {
-            if(opAggregator.containsKey(tmpField)) {
-                Integer tmp = opAggregator.get(tmpField) + Integer.valueOf(((IntField) (appendField)).getValue());
-                opAggregator.put(tmpField, tmp);
-            } else {
-                opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
+            Field appendField = tup.getField(this.aggregateField);
+            Integer value = Integer.valueOf(((IntField)(appendField)).getValue());
+            if(this.operator == Aggregator.Op.COUNT) {
+                num++;
+            } else if (this.operator == Aggregator.Op.AVG) {
+                cnt++;
+                sum += value;
+                num = sum/cnt;
+            } else if (this.operator == Aggregator.Op.MIN) {
+                if(num > value) num = value;
+            } else if (this.operator == Aggregator.Op.MAX) {
+                if(num < value) num = value;
+            } else if (this.operator == Aggregator.Op.SUM) {
+                num += value;
             }
-        } else if (this.operator == Aggregator.Op.MIN) {
-            if(opAggregator.containsKey(tmpField)) {
-                if(Integer.valueOf(((IntField) (appendField)).getValue()) < opAggregator.get(tmpField)) {
+
+        } else {
+            Field tmpField = tup.getField(this.gbField);
+            Field appendField = tup.getField(this.aggregateField);
+            if (this.operator == Aggregator.Op.SUM) {
+                if (opAggregator.containsKey(tmpField)) {
+                    Integer tmp = opAggregator.get(tmpField) + Integer.valueOf(((IntField) (appendField)).getValue());
+                    opAggregator.put(tmpField, tmp);
+                } else {
                     opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
                 }
+            } else if (this.operator == Aggregator.Op.MIN) {
+                if (opAggregator.containsKey(tmpField)) {
+                    if (Integer.valueOf(((IntField) (appendField)).getValue()) < opAggregator.get(tmpField)) {
+                        opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
+                    }
 
-            } else {
-                opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
-            }
-        } else if (this.operator == Aggregator.Op.MAX) {
-            if(opAggregator.containsKey(tmpField)) {
-                if(Integer.valueOf(((IntField) (appendField)).getValue()) > opAggregator.get(tmpField))
+                } else {
                     opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
+                }
+            } else if (this.operator == Aggregator.Op.MAX) {
+                if (opAggregator.containsKey(tmpField)) {
+                    if (Integer.valueOf(((IntField) (appendField)).getValue()) > opAggregator.get(tmpField))
+                        opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
+                } else {
+                    opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
+                }
+            } else if (this.operator == Aggregator.Op.AVG) {
+                if (opAggregator.containsKey(tmpField)) {
+                    Integer cnt = cntAggregator.get(tmpField);
+                    Integer sum = sumAggregator.get(tmpField);
+                    Integer val = Integer.valueOf(((IntField)(appendField)).getValue());
+                    cntAggregator.put(tmpField, cnt + 1);
+                    sumAggregator.put(tmpField, sum + val);
+                    opAggregator.put(tmpField, (sum + val)/(cnt + 1));
+                } else {
+                    Integer val = Integer.valueOf(((IntField)(appendField)).getValue());
+                    opAggregator.put(tmpField, val);
+                    cntAggregator.put(tmpField, 1);
+                    sumAggregator.put(tmpField, val);
+                }
+            } else if (this.operator == Aggregator.Op.COUNT) {
+                if(opAggregator.containsKey(tmpField)) {
+                    opAggregator.put(tmpField, opAggregator.get(tmpField) + 1);
+                } else {
+                    opAggregator.put(tmpField, 1);
+                }
             } else {
-//                opAggregator[tmpField] = ((IntField) (tmpField)).getValue();
-                opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
+                assert false;
             }
-        } else if (this.operator == Aggregator.Op.AVG) {
-            if(opAggregator.containsKey(tmpField)) {
-                Integer cnt = cntAggregator.get(tmpField);
-                Integer oldAvg = opAggregator.get(tmpField);
-                Integer newAvg = (oldAvg * cnt + Integer.valueOf(((IntField) (appendField)).getValue()))/(cnt + 1);
-                opAggregator.put(tmpField, newAvg);
-                cntAggregator.put(tmpField, cnt + 1);
-            } else {
-//                opAggregator[tmpField] = ((IntField) (tmpField)).getValue();
-                opAggregator.put(tmpField, Integer.valueOf(((IntField) (appendField)).getValue()));
-                cntAggregator.put(tmpField, 1);
-            }
-        } else {
-            assert false;
         }
     }
 
@@ -109,20 +150,23 @@ public class IntegerAggregator implements Aggregator {
      */
     public DbIterator iterator() {
         ArrayList<Tuple> tuples = new ArrayList<Tuple> ();
-        if(this.gbField == NO_GROUPING) assert false;
-        // else
         Tuple currTuple = null;
-        for(Map.Entry element: this.opAggregator.entrySet()) {
-            Field key = (Field)element.getKey();
-            Integer value = (Integer)element.getValue();
+        if(this.gbField == NO_GROUPING) {
             currTuple = new Tuple(this.td);
-            currTuple.setField(0, key);
-            currTuple.setField(1, new IntField(value.intValue()));
+            currTuple.setField(0, new IntField(num.intValue()));
             tuples.add(currTuple);
+            return new TupleIterator(td, tuples);
+        } else {
+            for (Map.Entry element : this.opAggregator.entrySet()) {
+                Field key = (Field) element.getKey();
+                Integer value = (Integer) element.getValue();
+                currTuple = new Tuple(this.td);
+                currTuple.setField(0, key);
+                currTuple.setField(1, new IntField(value.intValue()));
+                tuples.add(currTuple);
+            }
+            return new TupleIterator(td, tuples);
         }
-
-        return new TupleIterator(td, tuples);
-
     }
 
 }
