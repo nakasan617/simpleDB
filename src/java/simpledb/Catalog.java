@@ -134,18 +134,15 @@ public class Catalog {
 
     public Iterator<Integer> tableIdIterator() {
         ArrayList<Integer> rv = new ArrayList<Integer> ();
-        for(int i = 0; i < this.Tables.size(); i++)
-        {
+        for(int i = 0; i < this.Tables.size(); i++) {
             rv.add(this.Tables.get(i).file.getId());
         }
         return rv.iterator();
     }
 
     public String getTableName(int id) {
-        for(int i = 0; i < this.Tables.size(); i++)
-        {
-            if(id == this.Tables.get(i).file.getId())
-            {
+        for(int i = 0; i < this.Tables.size(); i++) {
+            if(id == this.Tables.get(i).file.getId()) {
                 return this.Tables.get(i).name;
             }
         }

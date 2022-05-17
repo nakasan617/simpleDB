@@ -278,13 +278,19 @@ public class Parser {
             simpledb.ParsingException, Zql.ParseException {
         Query query = new Query(tId);
 
+//        System.out.println("at handleQueryStatement");
         LogicalPlan lp = parseQueryLogicalPlan(tId, s);
+//        System.out.println("logical plan done");
         DbIterator physicalPlan = lp.physicalPlan(tId,
                 TableStats.getStatsMap(), explain);
+//        System.out.println("physical plan done");
         query.setPhysicalPlan(physicalPlan);
+//        System.out.println("setPhysicalPlan done");
         query.setLogicalPlan(lp);
+//        System.out.println("at right before the if statement");
 
         if (physicalPlan != null) {
+//            System.out.println("physical plan was not NULL");
             Class<?> c;
             try {
                 c = Class.forName("simpledb.OperatorCardinality");
@@ -303,7 +309,9 @@ public class Parser {
                         "printQueryPlanTree", DbIterator.class, System.out.getClass());
                 m.invoke(c.newInstance(), physicalPlan,System.out);
             } catch (ClassNotFoundException e) {
+//                System.out.println("went through classNotFoundException");
             } catch (SecurityException e) {
+//                System.out.println("went through securityException");
             } catch (NoSuchMethodException e) {
                 e.printStackTrace();
             } catch (IllegalArgumentException e) {
@@ -315,6 +323,8 @@ public class Parser {
             } catch (InstantiationException e) {
                 e.printStackTrace();
             }
+        } else {
+//            System.out.println("physical plan was null");
         }
 
         return query;
@@ -505,11 +515,10 @@ public class Parser {
         try {
             ZqlParser p = new ZqlParser(is);
             ZStatement s = p.readStatement();
-
             Query query = null;
-            if (s instanceof ZTransactStmt)
+            if (s instanceof ZTransactStmt) {
                 handleTransactStatement((ZTransactStmt) s);
-            else {
+            } else {
                 if (!this.inUserTrans) {
                     curtrans = new Transaction();
                     curtrans.start();
@@ -517,23 +526,25 @@ public class Parser {
                             + curtrans.getId().getId());
                 }
                 try {
-                    if (s instanceof ZInsert)
+                    if (s instanceof ZInsert) {
                         query = handleInsertStatement((ZInsert) s,
                                 curtrans.getId());
-                    else if (s instanceof ZDelete)
+                    } else if (s instanceof ZDelete) {
                         query = handleDeleteStatement((ZDelete) s,
                                 curtrans.getId());
-                    else if (s instanceof ZQuery)
+                    } else if (s instanceof ZQuery) {
+//                        System.out.println("handlingQueryStatement");
                         query = handleQueryStatement((ZQuery) s,
                                 curtrans.getId());
-                    else {
+                    } else {
                         System.out
                                 .println("Can't parse "
                                         + s
                                         + "\n -- parser only handles SQL transactions, insert, delete, and select statements");
                     }
-                    if (query != null)
+                    if (query != null) {
                         query.execute();
+                    }
 
                     if (!inUserTrans && curtrans != null) {
                         curtrans.commit();

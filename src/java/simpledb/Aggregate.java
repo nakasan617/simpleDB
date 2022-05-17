@@ -106,7 +106,6 @@ public class Aggregate extends Operator {
                 type = null;
 
             if (this.td.getFieldType(this.aggregateField) == Type.INT_TYPE) {
-//                System.out.println("this.groupingField: " + this.groupingField);
                 agtr = new IntegerAggregator(this.groupingField, type, this.aggregateField, this.aop);
             } else {
                 agtr = new StringAggregator(this.groupingField, type, this.aggregateField, this.aop);
@@ -161,9 +160,15 @@ public class Aggregate extends Operator {
      */
     public TupleDesc getTupleDesc() { // you need to get the tuple desc of whatever you have created
         if(this.groupingField == Aggregator.NO_GROUPING) {
-            return new TupleDesc(new Type [] {Type.INT_TYPE});
+            return new TupleDesc(
+                    new Type [] {Type.INT_TYPE},
+                    new String[] {this.aop.toString()}
+            );
         } else {
-            return new TupleDesc(new Type [] {this.td.getFieldType(this.groupingField), Type.INT_TYPE});
+            return new TupleDesc(
+                    new Type [] {this.td.getFieldType(this.groupingField), Type.INT_TYPE},
+                    new String [] {this.td.getFieldName(this.groupingField), this.aop.toString()}
+            );
         }
     }
 

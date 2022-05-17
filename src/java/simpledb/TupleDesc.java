@@ -103,9 +103,7 @@ public class TupleDesc implements Serializable {
      */
             //this.fieldName = n;
     public String getFieldName(int i) throws NoSuchElementException {
-        // some code goes here
-        if(i < 0 || i >= fields.size())
-        {
+        if(i < 0 || i >= fields.size()) {
             throw new NoSuchElementException();
         }
         return fields.get(i).fieldName;
@@ -122,9 +120,7 @@ public class TupleDesc implements Serializable {
      *             if i is not a valid field reference.
      */
     public Type getFieldType(int i) throws NoSuchElementException {
-        // some code goes here
-        if(i < 0 || i >= fields.size())
-        {
+        if(i < 0 || i >= fields.size()) {
             throw new NoSuchElementException();
         }
         return fields.get(i).fieldType;
@@ -140,14 +136,15 @@ public class TupleDesc implements Serializable {
      *             if no field with a matching name is found.
      */
     public int fieldNameToIndex(String name) throws NoSuchElementException {
-        // some code goes here
         if(name == null)
             throw new NoSuchElementException();
 
-        for(int i = 0; i < fields.size(); i++)
-        {
-            if(name.equals(fields.get(i).fieldName))
-            {
+        if(name.lastIndexOf('.') != -1) {
+            name = name.substring(name.lastIndexOf('.') + 1);
+        }
+
+        for(int i = fields.size() - 1; i >= 0; i--) {
+            if(name.equals(fields.get(i).fieldName)) {
                 return i;
             }
         }
@@ -160,10 +157,8 @@ public class TupleDesc implements Serializable {
      *         Note that tuples from a given TupleDesc are of a fixed size.
      */
     public int getSize() {
-        // some code goes here
         int rv = 0;
-        for(int i = 0; i < fields.size(); i++)
-        {
+        for(int i = 0; i < fields.size(); i++) {
             rv += fields.get(i).fieldType.getLen();
         }
         return rv;
@@ -180,7 +175,6 @@ public class TupleDesc implements Serializable {
      * @return the new TupleDesc
      */
     public static TupleDesc merge(TupleDesc td1, TupleDesc td2) {
-        // some code goes here
         int _size = td1.fields.size() + td2.fields.size();
         
         Type TypeAr [] = new Type[_size];

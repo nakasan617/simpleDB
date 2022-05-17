@@ -2,6 +2,8 @@ package simpledb;
 
 import java.io.*;
 import java.util.*;
+import java.util.*;
+
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -13,20 +15,63 @@ import java.util.*;
  * locks to read/write the page.
  */
 public class BufferPool {
-    private class PageInfo {
-        public PageId pid;
-        public Page page;
-        public long timeStamp;
+    /*
+     * I am implementing a simple cache here
+     */
 
-        PageInfo(PageId pid_, Page page_, long timeStamp_)
-        {
-            pid = pid_;
-            page = page_;
-            timeStamp = timeStamp_;
+    public class Cache<Key, Value> {
+        int capacity;
+        HashMap<Key, Value> hashMap;
+        ArrayList<Key> queue;
+
+        public Cache(int capacity) {
+            this.capacity = capacity;
+            this.hashMap = new HashMap<Key, Value> ();
+            this.queue = new ArrayList<Key> ();
         }
 
-        Page getPage() {
-            return this.page;
+        public Value get(Key key) {
+            // I don't update the queue here
+            return this.hashMap.get(key);
+        }
+
+        public void put(Key key, Value value) {
+            if(!this.hashMap.containsKey(key)) {
+                if(this.hashMap.size() >= this.capacity) {
+                    this.evict();
+                }
+                this.queue.add(key);
+                this.hashMap.put(key, value);
+            } else {
+                // this is just updating the value in the key;
+                this.hashMap.put(key, value);
+            }
+        }
+
+        public boolean containsKey(Key key) {
+            return this.hashMap.containsKey(key);
+        }
+
+        public int size() {
+            return this.hashMap.size();
+        }
+
+        public Key getEvictingKey() {
+            return this.queue.get(0);
+        }
+        public void evict() {
+            Key key = this.queue.get(0);
+            this.queue.remove(0);
+            this.hashMap.remove(key);
+        }
+
+        public void remove(Key key) {
+            this.hashMap.remove(key);
+            for(int i = 0; i < this.queue.size(); i++) {
+                if(this.queue.get(i) == key) {
+                    this.queue.remove(i);
+                }
+            }
         }
     }
    /** Bytes per page, including header. */
@@ -37,11 +82,8 @@ public class BufferPool {
     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
     private int MAX_PAGES;
-    private HashMap<PageId, PageInfo> cache;
-    //private HashMap<int, PageId> page2evict;
-    private long currTimeStamp;
-    private HashMap<TransactionId, HashSet<PageId>> tidConverter;
-    private ArrayList<PageId> page2evict;
+    private Cache<PageId, Page> cache;
+    private HashMap<TransactionId, Set<PageId>> transactions;
 
     /**
      * Creates a BufferPool that caches up to numPages pages.
@@ -50,11 +92,8 @@ public class BufferPool {
      */
     public BufferPool(int numPages) {
         this.MAX_PAGES = numPages;
-        this.cache = new HashMap<PageId, PageInfo> ();
-        this.tidConverter = new HashMap<TransactionId, HashSet<PageId>> ();
-        //this.page2evict = new HashMap<int, PageId> ();
-        this.page2evict = new ArrayList<PageId> ();
-        this.currTimeStamp = 0;
+        this.cache = new Cache<PageId, Page> (numPages);
+        this.transactions = new HashMap<TransactionId, Set<PageId>> ();
     }
 
     /**
@@ -76,55 +115,25 @@ public class BufferPool {
         throws TransactionAbortedException, DbException, InterruptedException {
         if(cache.containsKey(pid))
         {
-            PageInfo pageInfo = this.cache.get(pid);
-            long pastTimeStamp = pageInfo.timeStamp;
-            pageInfo.timeStamp = this.currTimeStamp;
-            this.currTimeStamp++;
-            return pageInfo.page;
+            Page page = this.cache.get(pid);
+            this.insertTransactions(tid, pid);
+            return page;
         }
         else
         {
-            // you need to retrieve it from HeapFile
-            if(cache.size() >= this.MAX_PAGES)
-            {
-//                System.out.println("option to evict page");
-                HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(pid.getTableId());
-                Page pg = (Page)hf.readPage(pid);
-                PageInfo pageInfo = new PageInfo(pid, pg, this.currTimeStamp);
-                this.cache.put(pid, pageInfo);
-
-                this.evictPage();
-                this.page2evict.add(pid);
-
-
-                this.tidConverter.get(tid).add(pid);
-                this.currTimeStamp++;
-                return pg;
-            }
-            else
-            {
-//                System.out.println("other option to not to evict page");
-                HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(pid.getTableId());
-                Page pg = (Page)hf.readPage(pid);
-                PageInfo pageInfo = new PageInfo(pid, pg, this.currTimeStamp);
-                this.cache.put(pid, pageInfo);
-
-                this.page2evict.add(pid);
-                if(!this.tidConverter.containsKey(tid)) {
-                    this.tidConverter.put(tid, new HashSet<PageId>());
-                }
-                this.tidConverter.get(tid).add(pid);
-                this.currTimeStamp++;
-////                System.out.println("pg == null: " + (pg == null));
-//                if(pg != null)
-//                {
-//                    System.out.println(pg.toString());
-//                }
-
-                return pg;
-            }
-
+            HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(pid.getTableId());
+            Page page = (Page)hf.readPage(pid);
+            this.cache.put(pid, page);
+            this.insertTransactions(tid, pid);
+            return page;
         }
+    }
+
+    private void insertTransactions(TransactionId tid, PageId pid) {
+        if(!this.transactions.containsKey(tid)) {
+            this.transactions.put(tid, new HashSet<PageId> ());
+        }
+        this.transactions.get(tid).add(pid);
     }
 
     /**
@@ -189,15 +198,16 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(tableId);
         ArrayList<Page> pages = hf.insertTuple(tid, t);
-        Page pg;
 
-        if(!this.tidConverter.containsKey(tid)) {
-            this.tidConverter.put(tid, new HashSet<PageId> ());
+        if(!this.transactions.containsKey(tid)) {
+            this.transactions.put(tid, new HashSet<PageId> ());
         }
-
+        Page page;
         for(int i = 0; i < pages.size(); i++) {
-            pages.get(i).markDirty(true, tid);
-            this.tidConverter.get(tid).add(pages.get(i).getId());
+            page = pages.get(i);
+            page.markDirty(true, tid);
+            this.cache.put(page.getId(), page);
+            this.transactions.get(tid).add(page.getId());
         }
 
     }
@@ -221,14 +231,8 @@ public class BufferPool {
         HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(tableId);
         Page pg = hf.deleteTuple(tid, t); 
         pg.markDirty(true, tid);
-        PageInfo pi = new PageInfo(pg.getId(), pg, this.currTimeStamp);
-        this.cache.put(pg.getId(), pi);
-        this.currTimeStamp++;
-
-        if(!this.tidConverter.containsKey(tid)) {
-            this.tidConverter.put(tid, new HashSet<PageId> ());
-        }
-        this.tidConverter.get(tid).add(pg.getId());
+        this.cache.put(pg.getId(), pg);
+        this.insertTransactions(tid, pg.getId());
     }
 
     /**
@@ -237,8 +241,7 @@ public class BufferPool {
      *     break simpledb if running in NO STEAL mode.
      */
     public synchronized void flushAllPages() throws IOException {
-        for(TransactionId tid: this.tidConverter.keySet())
-        {
+        for(TransactionId tid: this.transactions.keySet()) {
             this.flushPages(tid);
         }
     }
@@ -252,12 +255,6 @@ public class BufferPool {
         if(this.cache.containsKey(pid)) {
             this.cache.remove(pid);
         }
-
-        for(int i = 0; i < this.page2evict.size(); i++) {
-            if(page2evict.get(i).equals(pid)) {
-                page2evict.remove(i);
-            }
-        }
     }
 
     /**
@@ -265,7 +262,8 @@ public class BufferPool {
      * @param pid an ID indicating the page to flush
      */
     private synchronized  void flushPage(PageId pid) throws IOException {
-        Page page = this.cache.get(pid).page;
+        Page page = this.cache.get(pid);
+        assert page != null;
         // I need to get the HeapFile
         DbFile dbFile = Database.getCatalog().getDbFile(pid.getTableId());
         dbFile.writePage(page);
@@ -275,15 +273,20 @@ public class BufferPool {
     /** Write all pages of the specified transaction to disk.
      */
     public synchronized  void flushPages(TransactionId tid) throws IOException {
-        Iterator<PageId> pageIds = this.tidConverter.get(tid).iterator();
-        PageInfo pageInfo = null;
-        PageId pid = null;
-        Page page = null;
-        while(pageIds.hasNext()) {
-            page = this.cache.get(pageIds.next()).getPage();
-            if(page.isDirty() != null) {
-                this.flushPage(page.getId());
+        try {
+            Set<PageId> pids = this.transactions.get(tid);
+            assert pids != null;
+            Iterator<PageId> it = pids.iterator();
+            PageId pid;
+            while (it.hasNext()) {
+                pid = it.next();
+                if (this.cache.containsKey(pid) && this.cache.get(pid).isDirty() != null) {
+                    flushPage(pid);
+                }
             }
+        } catch (Exception e) {
+            System.out.println("exception caught");
+            e.printStackTrace();
         }
     }
 
@@ -292,17 +295,17 @@ public class BufferPool {
      * Flushes the page to disk to ensure dirty pages are updated on disk.
      */
     private synchronized  void evictPage() throws DbException {
-        PageId evictingPageId = this.page2evict.get(0);
-        Page page = this.cache.get(evictingPageId).page;
-        this.page2evict.remove(0);
+        PageId pid = this.cache.getEvictingKey();
+        Page page = this.cache.get(pid);
         try {
             if (page.isDirty() != null) {
-                this.flushPage(evictingPageId);
+                flushPage(pid);
             }
         } catch (IOException e) {
             e.printStackTrace();
+            throw new DbException("IOException caught");
         }
-        this.cache.remove(evictingPageId);
+        this.cache.evict();
     }
 
 }

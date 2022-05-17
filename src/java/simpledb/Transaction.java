@@ -41,7 +41,6 @@ public class Transaction {
 
     /** Handle the details of transaction commit / abort */
     public void transactionComplete(boolean abort) throws IOException {
-
         if (started) {
             //write commit / abort records
             if (abort) {
@@ -53,7 +52,6 @@ public class Transaction {
             }
 
             try {
-
                 Database.getBufferPool().transactionComplete(tid, !abort); // release locks
 
             } catch (IOException e) {

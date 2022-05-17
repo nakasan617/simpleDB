@@ -290,6 +290,7 @@ public class LogicalPlan {
         HashMap<String,Double> filterSelectivities = new HashMap<String, Double>();
         HashMap<String,TableStats> statsMap = new HashMap<String,TableStats>();
 
+//        System.out.println("going into while loop");
         while (tableIt.hasNext()) {
             LogicalScanNode table = tableIt.next();
             SeqScan ss = null;
@@ -305,6 +306,7 @@ public class LogicalPlan {
             filterSelectivities.put(table.alias, 1.0);
 
         }
+//        System.out.println("got out of while loop");
 
         Iterator<LogicalFilterNode> filterIt = filters.iterator();        
         while (filterIt.hasNext()) {
@@ -343,6 +345,7 @@ public class LogicalPlan {
 
             //s.addSelectivityFactor(estimateFilterSelectivity(lf,statsMap));
         }
+//        System.out.println("got out of the second while loop");
         
         JoinOptimizer jo = new JoinOptimizer(this,joins);
 
@@ -401,16 +404,19 @@ public class LogicalPlan {
             }
             
         }
-
+//        System.out.println("got out of the third while loop");
         if (subplanMap.size() > 1) {
             throw new ParsingException("Query does not include join expressions joining all nodes!");
         }
-        
-        DbIterator node =  (DbIterator)(subplanMap.entrySet().iterator().next().getValue());
+
+        // subplanMap = new HashMap<String,DbIterator>();
+
+        DbIterator node =  (subplanMap.entrySet().iterator().next().getValue());
 
         //walk the select list, to determine order in which to project output fields
         ArrayList<Integer> outFields = new ArrayList<Integer>();
         ArrayList<Type> outTypes = new ArrayList<Type>();
+        int cnt = 0;
         for (int i = 0; i < selectList.size(); i++) {
             LogicalSelectListNode si = selectList.elementAt(i);
             if (si.aggOp != null) {
@@ -421,7 +427,7 @@ public class LogicalPlan {
 //                    id = 
                     td.fieldNameToIndex(si.fname);
                 } catch (NoSuchElementException e) {
-                    throw new ParsingException("Unknown field " +  si.fname + " in SELECT list");
+                    throw new ParsingException("Unknown field " +  si.fname + " in SELECT list, " + td.toString());
                 }
                 outTypes.add(Type.INT_TYPE);  //the type of all aggregate functions is INT
 
@@ -446,11 +452,13 @@ public class LogicalPlan {
                     }
             } else  {
                     TupleDesc td = node.getTupleDesc();
-                    int id;
+                    int id = -1;
                     try {
                         id = td.fieldNameToIndex(si.fname);
                     } catch (NoSuchElementException e) {
-                        throw new ParsingException("Unknown field " +  si.fname + " in SELECT list");
+                        throw new ParsingException("Unknown field " +  si.fname + " in SELECT list " + td.toString());
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
                     outFields.add(id);
                     outTypes.add(td.getFieldType(id));

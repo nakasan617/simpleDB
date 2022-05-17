@@ -22,6 +22,7 @@ public class HeapPage implements Page {
     byte[] oldData;
     TransactionId tid;
     boolean isPageDirty;
+    ArrayList<Tuple> tupleArrayList;
 
     /**
      * Create a HeapPage from a set of bytes of data read from disk.
@@ -66,6 +67,7 @@ public class HeapPage implements Page {
         setBeforeImage();
         this.tid = null;
         this.isPageDirty = false;
+        this.tupleArrayList = null;
     }
 
     /** Retrieve the number of tuples on this page.
@@ -81,12 +83,9 @@ public class HeapPage implements Page {
      */
     private int getHeaderSize() {        
         int numBits = getNumTuples(); 
-        if(numBits % 8 == 0)
-        {
+        if(numBits % 8 == 0) {
             return numBits / 8;
-        }
-        else
-        {
+        } else {
             return numBits / 8 + 1;
         }
     }
@@ -284,7 +283,8 @@ public class HeapPage implements Page {
     public void markDirty(boolean dirty, TransactionId tid) {
         this.tid = tid;
         this.isPageDirty = dirty;
-    }
+        this.tupleArrayList = null; // this creates the need for the arraylist to be recreated;
+     }
 
     /**
      * Returns the tid of the transaction that last dirtied this page, or null if the page is not dirty
@@ -347,16 +347,30 @@ public class HeapPage implements Page {
      * (note that this iterator shouldn't return tuples in empty slots!)
      */
     public Iterator<Tuple> iterator() {
-        ArrayList<Tuple> al = new ArrayList<Tuple> ();
-        for(int i = 0; i < this.numSlots; i++)
-        {
-            if(this.isSlotUsed(i))
-            {
-                al.add(this.tuples[i]);
+        if(this.tupleArrayList == null) {
+            this.tupleArrayList = new ArrayList<Tuple>();
+            for (int i = 0; i < this.numSlots; i++) {
+                if (this.isSlotUsed(i)) {
+                    this.tupleArrayList.add(this.tuples[i]);
+                }
             }
+            return this.tupleArrayList.iterator();
+        } else {
+            return this.tupleArrayList.iterator();
         }
-        
-        return al.iterator();
+    }
+
+    public ArrayList<Tuple> arrayList() {
+        if(this.tupleArrayList != null) {
+            return this.tupleArrayList;
+        } else {
+            for(int i = 0; i < this.numSlots; i++) {
+                if(this.isSlotUsed(i)) {
+                    this.tupleArrayList.add(this.tuples[i]);
+                }
+            }
+            return this.tupleArrayList;
+        }
     }
 
     public String toString() {

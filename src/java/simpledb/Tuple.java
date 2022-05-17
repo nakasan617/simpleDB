@@ -24,11 +24,9 @@ public class Tuple implements Serializable {
      *            instance with at least one field.
      */
     public Tuple(TupleDesc td) {
-        // some code goes here
         this.td = td;
         contents = new Field [td.numFields()];
-        for(int i = 0; i < contents.length; i++)
-        {
+        for(int i = 0; i < contents.length; i++) {
             this.contents[i] = null;
         }
         this.rid = null;
@@ -93,15 +91,11 @@ public class Tuple implements Serializable {
      */
     public String toString() {
         String str = "";
-        for(int i = 0; i < this.contents.length; i++)
-        {
+        for(int i = 0; i < this.contents.length; i++) {
             str += this.contents[i].toString();
-            if(i != this.contents.length - 1)
-            {
+            if(i != this.contents.length - 1) {
                 str += "\t";
-            }
-            else
-            {
+            } else {
                 str += "\n";
             }
         }    
