@@ -1,4 +1,4 @@
-# Here I have Lab2 Ready #
+# Here I have Lab3 Ready #
 
 ### at Lab 1 ###
 Design Decisions/Justifications of Any Change
@@ -54,3 +54,24 @@ HeapFile.java/HeapPage.java
 
 - I should not have any missing part of the code.
 - I spent around 15 - 20 hours on this lab.
+
+### at Lab 3 ###
+Design Decisions/Justifications for Any Change
+
+    Aggregators should look pretty straight forward. For mergeTupleIntoGroup I first branch off into NO_GROUPING or not, and then do the necessary procedure according to which aggregate actions are necessary. In Aggregate.java, I get the IntegerAggregator/StringAggregator according to the fieldType of aggregateField, and shove in all the elements of iterator to the aggregator and return one tuple at a time when asked.
+
+    I used the simple hash joins because I knew for sure that the memory size in the actual program is different and it would not cause thrashing, which would kill the performance. I use simple hash joins when the operators are equal, because that is what is used for the contest (and hash joins do not work well with ranged queries), and otherwise, tuple joins to handle the other cases (but this was not really requested in the contest).
+
+    There were a couple of nasty bugs I faced. I will write those in the section below.
+
+Bugs
+    - untarring bug
+        This one I wrote on the discord too. But when you untar the .tar.gz file in the Join.java, JoinPredicate.java, Insert.java, Delete.java was written on to be the initial state. So I needed to copy from my git history.
+
+    - self join bug (which I believe many would have)
+        This is a bug which I believe many people would have still. Some people would have the result of the query 3 Michael Stonebraker 14, and other people would have Michael Stonebraker 8 with some other people with count 1 instead, the latter is correct. This bug happens in LogicalPlans.java, line 475 in my code, function td.fieldNameToIndex(groupByField). Since the query is the self join this necessitates the distinction between a1.name and a2.name. Those who aggregated with a1.name will get the wrong answer and a2.name will get the right answer. The only good way is to check the table name too when fieldNameToIndex is called, but many people, including who luckily got the correct answer, have changed the string of fieldNameToIndex by omitting the table name. I have changed this in an ad hoc way to looking through the array of Strings in the reverse order, and you can definitely take some points off of me for this. However, if you do, you have to take other people's points off too if they got the right answer and not even aware of this bug.
+
+Time for each query
+    query 1. 0.25 seconds 
+    query 2. 0.47 seconds
+    query 3. 1.11 seconds
