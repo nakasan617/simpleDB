@@ -98,12 +98,9 @@ public class HeapFile implements DbFile {
      */
     public int numPages() {
         int numPages;
-        if(this.file.length() % BufferPool.PAGE_SIZE == 0)
-        {
+        if(this.file.length() % BufferPool.PAGE_SIZE == 0) {
             numPages = ((int)(this.file.length()))/BufferPool.PAGE_SIZE;
-        }
-        else
-        {
+        } else {
             numPages = ((int)this.file.length())/BufferPool.PAGE_SIZE + 1;
         }
 
@@ -130,6 +127,7 @@ public class HeapFile implements DbFile {
         HeapPage hp = null;
         HeapPageId pid = null;
         //System.out.println("numPages: " + this.numPages());
+
         for(int i = 0; i < this.numPages(); i++) {
             pid = new HeapPageId(this.id, i);
             try {

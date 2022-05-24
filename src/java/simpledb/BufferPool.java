@@ -2,9 +2,6 @@ package simpledb;
 
 import java.io.*;
 import java.util.*;
-import java.util.*;
-
-
 /**
  * BufferPool manages the reading and writing of pages into memory from
  * disk. Access methods call into it to retrieve pages, and it fetches
@@ -14,76 +11,21 @@ import java.util.*;
  * a page, BufferPool checks that the transaction has the appropriate
  * locks to read/write the page.
  */
+
 public class BufferPool {
-    /*
-     * I am implementing a simple cache here
-     */
 
-    public class Cache<Key, Value> {
-        int capacity;
-        HashMap<Key, Value> hashMap;
-        ArrayList<Key> queue;
-
-        public Cache(int capacity) {
-            this.capacity = capacity;
-            this.hashMap = new HashMap<Key, Value> ();
-            this.queue = new ArrayList<Key> ();
-        }
-
-        public Value get(Key key) {
-            // I don't update the queue here
-            return this.hashMap.get(key);
-        }
-
-        public void put(Key key, Value value) {
-            if(!this.hashMap.containsKey(key)) {
-                if(this.hashMap.size() >= this.capacity) {
-                    this.evict();
-                }
-                this.queue.add(key);
-                this.hashMap.put(key, value);
-            } else {
-                // this is just updating the value in the key;
-                this.hashMap.put(key, value);
-            }
-        }
-
-        public boolean containsKey(Key key) {
-            return this.hashMap.containsKey(key);
-        }
-
-        public int size() {
-            return this.hashMap.size();
-        }
-
-        public Key getEvictingKey() {
-            return this.queue.get(0);
-        }
-        public void evict() {
-            Key key = this.queue.get(0);
-            this.queue.remove(0);
-            this.hashMap.remove(key);
-        }
-
-        public void remove(Key key) {
-            this.hashMap.remove(key);
-            for(int i = 0; i < this.queue.size(); i++) {
-                if(this.queue.get(i) == key) {
-                    this.queue.remove(i);
-                }
-            }
-        }
-    }
-   /** Bytes per page, including header. */
+    /** Bytes per page, including header. */
     public static final int PAGE_SIZE = 4096;
 
     /** Default number of pages passed to the constructor. This is used by
-    other classes. BufferPool should use the numPages argument to the
-    constructor instead. */
+     other classes. BufferPool should use the numPages argument to the
+     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
     private int MAX_PAGES;
-    private Cache<PageId, Page> cache;
+    private Cache cache;
     private HashMap<TransactionId, Set<PageId>> transactions;
+
+    private LockManager lockManager;
 
     /**
      * Creates a BufferPool that caches up to numPages pages.
@@ -92,8 +34,9 @@ public class BufferPool {
      */
     public BufferPool(int numPages) {
         this.MAX_PAGES = numPages;
-        this.cache = new Cache<PageId, Page> (numPages);
+        this.cache = new Cache(numPages);
         this.transactions = new HashMap<TransactionId, Set<PageId>> ();
+        this.lockManager = new LockManager();
     }
 
     /**
@@ -112,17 +55,20 @@ public class BufferPool {
      * @param perm the requested permissions on the page
      */
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
-        throws TransactionAbortedException, DbException, InterruptedException {
-        if(cache.containsKey(pid))
-        {
+            throws TransactionAbortedException, DbException, InterruptedException {
+        try {
+            this.lockManager.acquireLock(tid, pid, perm);
+        } catch (DeadlockException e) {
+            throw new TransactionAbortedException();
+        }
+
+        if (cache.containsKey(pid)) {
             Page page = this.cache.get(pid);
             this.insertTransactions(tid, pid);
             return page;
-        }
-        else
-        {
-            HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(pid.getTableId());
-            Page page = (Page)hf.readPage(pid);
+        } else {
+            HeapFile hf = (HeapFile) Database.getCatalog().getDbFile(pid.getTableId());
+            Page page = (Page) hf.readPage(pid);
             this.cache.put(pid, page);
             this.insertTransactions(tid, pid);
             return page;
@@ -146,8 +92,7 @@ public class BufferPool {
      * @param pid the ID of the page to unlock
      */
     public  void releasePage(TransactionId tid, PageId pid) {
-        // some code goes here
-        // not necessary for proj1
+        this.lockManager.releaseLock(tid, pid);
     }
 
     /**
@@ -162,9 +107,7 @@ public class BufferPool {
 
     /** Return true if the specified transaction has a lock on the specified page */
     public boolean holdsLock(TransactionId tid, PageId p) {
-        // some code goes here
-        // not necessary for proj1
-        return false;
+        return this.lockManager.holdsLock(tid, p);
     }
 
     /**
@@ -175,27 +118,27 @@ public class BufferPool {
      * @param commit a flag indicating whether we should commit or abort
      */
     public void transactionComplete(TransactionId tid, boolean commit)
-        throws IOException {
+            throws IOException {
         // some code goes here
         // not necessary for proj1
     }
 
     /**
      * Add a tuple to the specified table behalf of transaction tid.  Will
-     * acquire a write lock on the page the tuple is added to(Lock 
-     * acquisition is not needed for lab2). May block if the lock cannot 
+     * acquire a write lock on the page the tuple is added to(Lock
+     * acquisition is not needed for lab2). May block if the lock cannot
      * be acquired.
-     * 
+     *
      * Marks any pages that were dirtied by the operation as dirty by calling
-     * their markDirty bit, and updates cached versions of any pages that have 
-     * been dirtied so that future requests see up-to-date pages. 
+     * their markDirty bit, and updates cached versions of any pages that have
+     * been dirtied so that future requests see up-to-date pages.
      *
      * @param tid the transaction adding the tuple
      * @param tableId the table to add the tuple to
      * @param t the tuple to add
      */
     public void insertTuple(TransactionId tid, int tableId, Tuple t)
-        throws DbException, IOException, TransactionAbortedException {
+            throws DbException, IOException, TransactionAbortedException {
         HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(tableId);
         ArrayList<Page> pages = hf.insertTuple(tid, t);
 
@@ -218,7 +161,7 @@ public class BufferPool {
      * the lock cannot be acquired.
      *
      * Marks any pages that were dirtied by the operation as dirty by calling
-     * their markDirty bit.  Does not need to update cached versions of any pages that have 
+     * their markDirty bit.  Does not need to update cached versions of any pages that have
      * been dirtied, as it is not possible that a new page was created during the deletion
      * (note difference from addTuple).
      *
@@ -226,10 +169,10 @@ public class BufferPool {
      * @param t the tuple to add
      */
     public  void deleteTuple(TransactionId tid, Tuple t)
-        throws DbException, TransactionAbortedException {
+            throws DbException, TransactionAbortedException {
         int tableId = t.getRecordId().getPageId().getTableId();
         HeapFile hf = (HeapFile)Database.getCatalog().getDbFile(tableId);
-        Page pg = hf.deleteTuple(tid, t); 
+        Page pg = hf.deleteTuple(tid, t);
         pg.markDirty(true, tid);
         this.cache.put(pg.getId(), pg);
         this.insertTransactions(tid, pg.getId());
@@ -247,10 +190,10 @@ public class BufferPool {
     }
 
     /** Remove the specific page id from the buffer pool.
-        Needed by the recovery manager to ensure that the
-        buffer pool doesn't keep a rolled back page in its
-        cache.
-    */
+     Needed by the recovery manager to ensure that the
+     buffer pool doesn't keep a rolled back page in its
+     cache.
+     */
     public synchronized void discardPage(PageId pid) {
         if(this.cache.containsKey(pid)) {
             this.cache.remove(pid);
