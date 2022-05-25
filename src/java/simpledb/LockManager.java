@@ -43,13 +43,6 @@ public class LockManager {
             throws DeadlockException {
         int cnt = 0;
         while(!lock(tid, pid, perm)) { // keep trying to get the lock
-//            try {
-//                FileWriter fw = new FileWriter("file.txt", true);
-//                fw.write("lock returned false, cnt: " + cnt++);
-//                fw.close();
-//            } catch (IOException e ) {
-//                e.printStackTrace();
-//            }
             synchronized(this) {
                 // you don't have the lock yet
                 // possibly some code here for Exercise 5, deadlock detection

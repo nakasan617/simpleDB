@@ -44,12 +44,30 @@ public class Cache {
     }
 
     public PageId getEvictingKey() {
-        return this.queue.get(0);
+        PageId pid;
+        for(int i = 0; i < this.queue.size(); i++) {
+            pid = this.queue.get(i);
+            if(this.hashMap.get(pid).isDirty() == null) {
+                return pid;
+            }
+        }
+        return null;
     }
     public void evict() {
-        PageId key = this.queue.get(0);
-        this.queue.remove(0);
-        this.hashMap.remove(key);
+        PageId pid = null;
+        int i = 0;
+        boolean found = false;
+        for(; i < this.queue.size(); i++) {
+            pid = this.queue.get(i);
+            if(this.hashMap.get(pid).isDirty() == null) {
+                found = true;
+                break;
+            }
+        }
+        if(found) {
+            this.queue.remove(i);
+            this.hashMap.remove(pid);
+        }
     }
 
     public void remove(PageId key) {
@@ -59,5 +77,25 @@ public class Cache {
                 this.queue.remove(i);
             }
         }
+    }
+
+    public void removePids(Set<PageId> pids) {
+        // iterate through the queue and remove
+        PageId pid;
+        int size = this.queue.size();
+        for(int i = size - 1; i >= 0; i--) {
+            pid = this.queue.get(i);
+            if(pids.contains(pid)) {
+                this.queue.remove(i);
+            }
+        }
+
+        // iterate through the hashMap and remove
+        Iterator<PageId> it = pids.iterator();
+        while(it.hasNext()) {
+            pid = it.next();
+            this.hashMap.remove(pid);
+        }
+
     }
 }

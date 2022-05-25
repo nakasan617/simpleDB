@@ -101,8 +101,7 @@ public class BufferPool {
      * @param tid the ID of the transaction requesting the unlock
      */
     public void transactionComplete(TransactionId tid) throws IOException {
-        // some code goes here
-        // not necessary for proj1
+        this.transactionComplete(tid, true);
     }
 
     /** Return true if the specified transaction has a lock on the specified page */
@@ -119,10 +118,22 @@ public class BufferPool {
      */
     public void transactionComplete(TransactionId tid, boolean commit)
             throws IOException {
-        // some code goes here
-        // not necessary for proj1
+        if(commit) {
+            this.flushPages(tid);
+        } else {
+            // "you should throw away any changes to pages that it made"
+            this.rollBack(tid);
+        }
+
+        this.transactions.remove(tid);
+        this.lockManager.releaseAllLocks(tid);
     }
 
+    public void rollBack(TransactionId tid) {
+        Set<PageId> pids = this.transactions.get(tid);
+        // go through all the cache and remove all those pids from the cache
+        this.cache.removePids(pids);
+    }
     /**
      * Add a tuple to the specified table behalf of transaction tid.  Will
      * acquire a write lock on the page the tuple is added to(Lock
@@ -218,7 +229,8 @@ public class BufferPool {
     public synchronized  void flushPages(TransactionId tid) throws IOException {
         try {
             Set<PageId> pids = this.transactions.get(tid);
-            assert pids != null;
+            if(pids == null) return;
+
             Iterator<PageId> it = pids.iterator();
             PageId pid;
             while (it.hasNext()) {
@@ -239,16 +251,11 @@ public class BufferPool {
      */
     private synchronized  void evictPage() throws DbException {
         PageId pid = this.cache.getEvictingKey();
-        Page page = this.cache.get(pid);
-        try {
-            if (page.isDirty() != null) {
-                flushPage(pid);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new DbException("IOException caught");
+        if(pid != null) {
+            Page page = this.cache.get(pid);
+            assert page.isDirty() == null;
+            this.cache.evict();
         }
-        this.cache.evict();
     }
 
 }
